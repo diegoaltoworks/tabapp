@@ -1,0 +1,56 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ['Build']
+    types: ['completed']
+    branches:
+      - main
+
+jobs:
+  build-failed:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - run: echo 'Build failed.'
+
+  abort-build:
+    needs: build-failed
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "*** BUILD FAILED - ABORT ***"
+          exit 1
+
+  build-completed:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - run: echo 'Build completed successfully.'
+
+  deploy:
+    needs: build-completed
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider'
+          service_account: 'ts-node-api@dworks-diegoa.iam.gserviceaccount.com'
+
+      - id: 'deploy'
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          service: 'ts-node-api'
+          image: 'gcr.io/dworks-diegoa/ts-node-api'
+
+      - name: 'Use output'
+        run: 'curl "${{ steps.deploy.outputs.url }}"'

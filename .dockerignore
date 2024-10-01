@@ -1,0 +1,11 @@
+# explicitly ignore all files and folders
+*
+
+# explicitly define which files are copied
+!backend/
+!frontend/
+!tsconfig.json
+!tsconfig.build.json
+!package.json
+!package-lock.json
+!ecosystem.config.js
